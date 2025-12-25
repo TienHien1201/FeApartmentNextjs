@@ -19,7 +19,7 @@ export default function ModalArticleDetail({ opened, close }: TProps) {
         <Modal
             opened={opened}
             onClose={close}
-            title={`Bài viết của ${articleDetail?.Users?.fullName.split(` `)[0]}`}
+            title={`Bài viết của ${articleDetail?.Users?.full_name.split(` `)[0]}`}
             styles={{
                 title: {
                     fontSize: "24px",

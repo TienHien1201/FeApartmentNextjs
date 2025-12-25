@@ -68,7 +68,7 @@ export async function getDetailUserAction(userId: string): Promise<TResAction<TU
 
 export async function searchNameUserAction(filters: string): Promise<TResAction<TResPagination<TUser> | null>> {
     try {
-        const queryFilters = { fullName: filters };
+        const queryFilters = { full_name: filters };
         const result = await api.get<TRes<TResPagination<TUser>>>(`${ENDPOINT.USER}?pageSize=100&page=1&filters=${JSON.stringify(queryFilters)}`);
         const { data } = result;
         return { status: "success", message: result.message, data: data };
@@ -79,7 +79,7 @@ export async function searchNameUserAction(filters: string): Promise<TResAction<
 
 export async function editProfileAction(payload: TEditProfileReq): Promise<TResAction<any | null>> {
     try {
-        const result = await api.patch<TRes<any>>(`${ENDPOINT.USER}/${payload.id}`, { fullName: payload.fullName });
+        const result = await api.patch<TRes<any>>(`${ENDPOINT.USER}/${payload.id}`, { full_name: payload.full_name });
         const { data } = result;
         return { status: "success", message: result.message, data: data };
     } catch (error: any) {

@@ -36,10 +36,10 @@ export default function SettingAccount() {
                                 gap: 10,
                             }}
                         >
-                            <Avatar size={`md`} fullName={info?.fullName} avatar={info?.avatar} color="initials" />
+                            <Avatar size={`md`} full_name={info?.full_name} avatar={info?.avatar} color="initials" />
                             <Stack gap={0}>
                                 <Text truncate sx={{ fontWeight: 900, fontSize: `16px`, maxWidth: `130px` }}>
-                                    {info?.fullName}
+                                    {info?.full_name}
                                 </Text>
                                 <Text truncate sx={{ maxWidth: `130px`, fontSize: `12px`, opacity: 0.5 }}>
                                     {info?.email}

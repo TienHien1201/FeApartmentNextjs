@@ -43,13 +43,13 @@ export default function Article({ article, handleModalArticleDetail, type }: TPr
             <Group justify="space-between" wrap="nowrap" px={10} py={15}>
                 <Box style={{ flexShrink: 0 }}>
                     <Avatar
-                        fullName={type === "my" ? info?.fullName : article.Users?.fullName}
+                        full_name={type === "my" ? info?.full_name : article.Users?.full_name}
                         avatar={type === "my" ? info?.avatar : article.Users?.avatar}
                     />
                 </Box>
                 <Stack gap={0} flex={1}>
-                    <Text fw={`bold`}>{type === "my" ? info?.fullName : article.Users?.fullName}</Text>
-                    <Text c={`dimmed`}>{formatLocalTime(article.createdAt, `ago`)}</Text>
+                    <Text fw={`bold`}>{type === "my" ? info?.full_name : article.Users?.full_name}</Text>
+                    <Text c={`dimmed`}>{formatLocalTime(article.created_at, `ago`)}</Text>
                 </Stack>
 
                 {/* control */}

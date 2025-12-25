@@ -65,7 +65,7 @@ export default function ModalCreateArticle({ opened, close }: TProps) {
         >
             <Stack p={5}>
                 <Box py={5}>
-                    <TagUser fullName={info?.fullName} avatar={info?.avatar} />
+                    <TagUser full_name={info?.full_name} avatar={info?.avatar} />
                 </Box>
 
                 {/* content */}
@@ -77,7 +77,7 @@ export default function ModalCreateArticle({ opened, close }: TProps) {
                     maxRows={5}
                     variant="unstyled"
                     size="xl"
-                    placeholder={`${info?.fullName} ơi, Bạn Đăng Nghĩ Gì Thế?`}
+                    placeholder={`${info?.full_name} ơi, Bạn Đăng Nghĩ Gì Thế?`}
                 />
 
                 {/* image view */}

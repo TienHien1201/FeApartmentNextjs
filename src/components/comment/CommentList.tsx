@@ -24,7 +24,7 @@ export default function CommentList({ article, listComment, setListComment }: TP
     const getCommentByArticle = useGetCommentByArticle({
         pagination: { pageIndex: pagination.pageIndex + 1, pageSize: pagination.pageSize },
         filters: filtersValue,
-        sort: { sortBy: `createdAt`, isDesc: true },
+        sort: { sortBy: `created_at`, isDesc: true },
     });
 
     useEffect(() => {
@@ -57,7 +57,7 @@ export default function CommentList({ article, listComment, setListComment }: TP
                 {listComment.map((comment: TListComment, i) => {
                     return (
                         <Group key={i} sx={{ padding: `0px 10px`, alignItems: `start` }}>
-                            <Avatar avatar={comment.Users.avatar} fullName={comment.Users.fullName} />
+                            <Avatar avatar={comment.Users.avatar} full_name={comment.Users.full_name} />
                             <Box>
                                 <Box
                                     sx={(_, u) => {
@@ -75,14 +75,14 @@ export default function CommentList({ article, listComment, setListComment }: TP
                                     }}
                                 >
                                     <Text fz={`sm`} fw={600}>
-                                        {comment.Users.fullName}
+                                        {comment.Users.full_name}
                                     </Text>
                                     <Text fz={`md`}>{comment.content}</Text>
                                 </Box>
-                                {comment.createdAt ? (
+                                {comment.created_at ? (
                                     <Group px={12}>
                                         <Text fz={`sm`} c={`dimmed`}>
-                                            {formatLocalTime(comment.createdAt, `ago`)}
+                                            {formatLocalTime(comment.created_at, `ago`)}
                                         </Text>
                                         <Text
                                             sx={{

@@ -37,7 +37,7 @@ export default function HomeRight({ onClose }: TProps) {
                 chatGroupName: chatGroup.name || "",
                 chatGroupMembers: chatGroup.ChatGroupMembers.map((member) => ({
                     avatar: member.Users.avatar,
-                    fullName: member.Users.fullName,
+                    full_name: member.Users.full_name,
                     roleId: member.Users.roleId,
                     userId: member.Users.id,
                 })),
@@ -100,7 +100,7 @@ export default function HomeRight({ onClose }: TProps) {
                                         borderRadius: `10px`,
                                     }}
                                 >
-                                    <TagUser fullName={user.Users.fullName} avatar={user.Users.avatar} />
+                                    <TagUser full_name={user.Users.full_name} avatar={user.Users.avatar} />
                                 </Box>
                             );
                         })}
@@ -158,7 +158,7 @@ export default function HomeRight({ onClose }: TProps) {
                                                         <Box key={i} sx={{ position: `absolute`, bottom: 0, left: 0, zIndex: 2 }}>
                                                             <Avatar
                                                                 size={`sm`}
-                                                                fullName={member.Users.fullName}
+                                                                full_name={member.Users.full_name}
                                                                 avatar={member.Users.avatar}
                                                                 radius="xl"
                                                             />
@@ -169,7 +169,7 @@ export default function HomeRight({ onClose }: TProps) {
                                                         <Box key={i} sx={{ position: `absolute`, top: 0, right: 0, zIndex: 1 }}>
                                                             <Avatar
                                                                 size={`sm`}
-                                                                fullName={member.Users.fullName}
+                                                                full_name={member.Users.full_name}
                                                                 avatar={member.Users.avatar}
                                                                 radius="xl"
                                                             />

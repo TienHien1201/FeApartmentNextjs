@@ -35,28 +35,39 @@ export default function MessageList({ stateChat, dataSendMessage }: TProps) {
     const chatMessage = useGetChatMessage({
         pagination: { pageIndex: page, pageSize: 10 },
         filters: { chatGroupId: stateChat.chatGroupId },
-        sort: { sortBy: `createdAt`, isDesc: true },
+        sort: { sortBy: `created_at`, isDesc: true },
     });
+
+    /* ================= PAGINATION INFO ================= */
 
     useEffect(() => {
         if (chatMessage.data?.totalPage) totalPageRef.current = chatMessage.data.totalPage;
         if (chatMessage.data?.totalItem) totalItemRef.current = chatMessage.data.totalItem;
     }, [chatMessage.data?.totalPage, chatMessage.data?.totalItem]);
+
     useEffect(() => {
         isAtBottomRef.current = isAtBottom;
     }, [isAtBottom]);
 
-    // Prepend data vào allMessages
+    /* ================= LOAD API MESSAGES ================= */
+
     useEffect(() => {
         if (!chatMessage.data?.items) return;
+
         const messages = chatMessage.data.items.reverse();
+
         setAllMessages((prev) => {
             if (prev.length === 0) return messages;
-            return [...messages, ...prev];
+
+            const existingIds = new Set(prev.map((m) => m.id));
+            const newMessages = messages.filter((m) => !existingIds.has(m.id));
+
+            return [...newMessages, ...prev];
         });
     }, [chatMessage.data?.items]);
 
-    // Scroll đến đáy khi lần đầu
+    /* ================= INITIAL SCROLL ================= */
+
     useEffect(() => {
         if (!hasScrolledInitiallyRef.current && allMessages.length > 0) {
             hasScrolledInitiallyRef.current = true;
@@ -64,26 +75,28 @@ export default function MessageList({ stateChat, dataSendMessage }: TProps) {
         }
     }, [allMessages.length]);
 
-    // Nhận tin nhắn mới qua socket
+    /* ================= SOCKET MESSAGE ================= */
+
     useEffect(() => {
-        if (!dataSendMessage?.chatGroupId) return;
+        if (!dataSendMessage?.chat_group_id) return;
 
-        // 👉 Nếu bạn gửi => luôn scroll
-        if (dataSendMessage.userIdSender === user?.id) {
-            shouldScrollRef.current = true;
-        }
-        // 👉 Nếu người khác gửi và bạn đang ở cuối => scroll
-        else if (isAtBottomRef.current) {
-            shouldScrollRef.current = true;
-        }
+        // chỉ append message đúng room đang mở
+        if (Number(dataSendMessage.chat_group_id) !== Number(stateChat.chatGroupId)) return;
 
+        // tránh duplicate khi API load trùng socket
         setAllMessages((prev) => {
-            if (prev.length === 0) return [dataSendMessage];
+            if (prev.some((m) => m.id === dataSendMessage.id)) return prev;
             return [...prev, dataSendMessage];
         });
-    }, [dataSendMessage]);
 
-    // Khi allMessages thay đổi → nếu có flag scroll thì scroll
+        // scroll logic
+        if (dataSendMessage.sender.id === user?.id || isAtBottomRef.current) {
+            shouldScrollRef.current = true;
+        }
+    }, [dataSendMessage, stateChat.chatGroupId, user?.id]);
+
+    /* ================= SCROLL WHEN MESSAGE APPENDED ================= */
+
     useEffect(() => {
         if (shouldScrollRef.current) {
             shouldScrollRef.current = false;
@@ -91,14 +104,14 @@ export default function MessageList({ stateChat, dataSendMessage }: TProps) {
         }
     }, [allMessages.length]);
 
-    // Kéo lên để load thêm
+    /* ================= LOAD MORE ================= */
+
     const handleStartReached = () => {
         if (chatMessage.isFetching || page >= totalPageRef.current) return;
         setPage((prev) => prev + 1);
     };
 
     const scrollToBottom = () => {
-        console.log("scroll to bottom");
         virtuosoRef.current?.scrollToIndex({
             index: allMessages.length - 1,
             align: "end",
@@ -106,6 +119,8 @@ export default function MessageList({ stateChat, dataSendMessage }: TProps) {
     };
 
     const firstItemIndex = Math.max(0, totalItemRef.current - allMessages.length);
+
+    /* ================= RENDER ================= */
 
     return (
         <div style={{ position: "relative", height: "100%" }}>
@@ -119,29 +134,30 @@ export default function MessageList({ stateChat, dataSendMessage }: TProps) {
                 firstItemIndex={firstItemIndex}
                 style={{ height: "100%" }}
                 itemContent={(index, messageItem: TAllmessage) => {
-                    const userRecipient = stateChat.chatGroupMembers.find((member) => member.userId === messageItem.userIdSender);
+                    const isMe = messageItem.sender.id === user?.id;
+
                     return (
-                        <Fragment key={index}>
-                            {messageItem.userIdSender === user?.id ? (
+                        <Fragment key={messageItem.id}>
+                            {isMe ? (
                                 <SenderMessageItem
                                     messageItem={{
                                         avatar: user?.avatar,
-                                        message: messageItem.messageText,
-                                        createdAt: messageItem.createdAt || "",
-                                        userId: messageItem.userIdSender,
-                                        roleId: user.roleId || "",
-                                        fullName: user?.fullName,
+                                        full_name: user?.full_name,
+                                        message_text: messageItem.message_text,
+                                        created_at: messageItem.created_at,
+                                        userId: messageItem.sender.id,
+                                        roleId: user?.roleId || "",
                                     }}
                                 />
                             ) : (
                                 <RecipientMessageItem
                                     messageItem={{
-                                        avatar: userRecipient?.avatar,
-                                        fullName: userRecipient?.fullName,
-                                        message: messageItem.messageText,
-                                        createdAt: messageItem.createdAt || "",
-                                        userId: userRecipient?.userId || "",
-                                        roleId: userRecipient?.roleId || "",
+                                        avatar: messageItem.sender.avatar,
+                                        full_name: messageItem.sender.full_name,
+                                        message_text: messageItem.message_text,
+                                        created_at: messageItem.created_at,
+                                        userId: messageItem.sender.id,
+                                        roleId: messageItem.sender.role_id,
                                     }}
                                 />
                             )}

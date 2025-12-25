@@ -33,7 +33,7 @@ export default function ArticleList({ height, filters, type, id }: TProps) {
         pagination: { pageIndex: page, pageSize },
         filters,
         id: id,
-        sort: { sortBy: `createdAt`, isDesc: true },
+        sort: { sortBy: `created_at`, isDesc: true },
     });
 
     // Khi fetch thành công, append articles vào cuối mảng

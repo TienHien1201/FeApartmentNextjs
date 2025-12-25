@@ -94,7 +94,7 @@ export default function Permission() {
                     );
                 },
             }),
-            columnHelper.accessor("createdAt", {
+            columnHelper.accessor("created_at", {
                 header: "Ngày",
                 size: 150,
                 cell: ({ cell }) => {
@@ -139,7 +139,7 @@ export default function Permission() {
                 columns={columns}
                 creates={fields}
                 updates={fields}
-                sort={{ sortBy: "createdAt", isDesc: true }}
+                sort={{ sortBy: "created_at", isDesc: true }}
                 fetchData={usePermissions}
                 onCreate={useCreatePermissions}
                 onUpdate={useUpdatePermissions}
@@ -153,7 +153,7 @@ export default function Permission() {
                     { field: "endpoint", label: "Endpoint", type: "text" },
                     { field: "module", label: "Module", type: "text" },
                     { field: "method", label: "Method", type: "select", data: ["POST", "GET", "PUT", "PATCH", "DELETE"] },
-                    { field: "createdAt", label: "Ngày", type: "date" },
+                    { field: "created_at", label: "Ngày", type: "date" },
                     { field: "isDeleted", label: "Xóa", type: "select", data: ["true", "false"] },
                 ]}
             />

@@ -3,86 +3,113 @@ import { TStateChat } from "@/types/chat.type";
 import _ from "lodash";
 import { logWithColor } from "./function.helper";
 
+// Lấy chat đã mở từ localStorage
 export const getChatOpened = (key: string): TStateChat[] => {
-   const stringLocal = localStorage.getItem(key);
-   if (stringLocal === null) return [];
-
-   const reuslt = JSON.parse(stringLocal);
-   if (!_.isArray(reuslt)) return [];
-
-   return reuslt;
+    const stringLocal = localStorage.getItem(key);
+    if (stringLocal === null) return [];
+    const result = JSON.parse(stringLocal);
+    if (!_.isArray(result)) return [];
+    return result;
 };
 
+// Thêm chat mới
 export const addChatOpened = (stateChatNew: TStateChat, onSuccess?: () => void) => {
-   const chatListOpened = getChatOpened(CHAT_OPENED);
-   const chatListBubble = getChatOpened(CHAT_BUBBLE);
+    const chatListOpened = getChatOpened(CHAT_OPENED);
+    const chatListBubble = getChatOpened(CHAT_BUBBLE);
 
-   // kiểm tra xem chatGroupId đã tồn tại hay chưa
-   const isAdd = [...chatListOpened, ...chatListBubble].find((stateChat: TStateChat) => {
-      return stateChat.chatGroupId === stateChatNew.chatGroupId;
-   });
+    const isAdd = [...chatListOpened, ...chatListBubble].find((stateChat: TStateChat) => stateChat.chatGroupId === stateChatNew.chatGroupId);
 
-   // nếu chatGroupId chưa tồn tại thì thêm mới
-   if (isAdd === undefined) {
-      if (chatListOpened.length >= 2) {
-         // xoá phần tử đầu tiên trong chatListOpened
-         const itemOpenedremove = chatListOpened.shift();
+    if (isAdd === undefined) {
+        if (chatListOpened.length >= 2) {
+            const itemOpenedRemove = chatListOpened.shift();
+            chatListOpened.push(stateChatNew);
 
-         // thêm phần tử mới vào cuối chatListOpened
-         chatListOpened.push(stateChatNew);
+            if (itemOpenedRemove) chatListBubble.push(itemOpenedRemove);
 
-         // thêm phần tử được xoá từ chatListOpened vào cuối chatListBubble
-         if (itemOpenedremove) chatListBubble.push(itemOpenedremove);
+            localStorage.setItem(CHAT_OPENED, JSON.stringify(chatListOpened));
+            localStorage.setItem(CHAT_BUBBLE, JSON.stringify(chatListBubble));
+        } else {
+            chatListOpened.push(stateChatNew);
+            localStorage.setItem(CHAT_OPENED, JSON.stringify(chatListOpened));
+        }
+    }
 
-         localStorage.setItem(CHAT_OPENED, JSON.stringify(chatListOpened));
-         localStorage.setItem(CHAT_BUBBLE, JSON.stringify(chatListBubble));
-      } else {
-         // thêm phần tử mới vào cuối chatListOpened
-         chatListOpened.push(stateChatNew);
-         localStorage.setItem(CHAT_OPENED, JSON.stringify(chatListOpened));
-      }
-   }
-
-   if (onSuccess) onSuccess();
+    if (onSuccess) onSuccess();
 };
 
+// Xóa chat
 export const removeChatOpened = (stateChat: TStateChat, key: string, onSuccess?: () => void) => {
-   const listChatOpened = getChatOpened(key);
+    const listChatOpened = getChatOpened(key);
 
-   if (_.isArray(listChatOpened)) {
-      _.remove(listChatOpened, (itemChat) => itemChat.chatGroupId === stateChat.chatGroupId);
-      localStorage.setItem(key, JSON.stringify(listChatOpened));
-   }
+    if (_.isArray(listChatOpened)) {
+        _.remove(listChatOpened, (itemChat) => itemChat.chatGroupId === stateChat.chatGroupId);
+        localStorage.setItem(key, JSON.stringify(listChatOpened));
+    }
 
-   if (onSuccess) onSuccess();
+    if (onSuccess) onSuccess();
 };
 
+// Mở chat từ bubble
 export const openChatFromBuble = (stateChat: TStateChat, onSuccess?: () => void) => {
-   removeChatOpened(stateChat, CHAT_BUBBLE);
-   addChatOpened(stateChat);
-   if (onSuccess) onSuccess();
+    removeChatOpened(stateChat, CHAT_BUBBLE);
+    addChatOpened(stateChat);
+    if (onSuccess) onSuccess();
 };
 
-export function listenToEvent(socket: any, eventName: string, callback: (...args: any[]) => void) {
-   socket?.on(eventName, callback);
-   logWithColor.sln().mes("🟢 LISTENING - ", { color: "green" }).mes(eventName, { color: "cyan", fontWeight: "bold" }).eln();
+// =================== WebSocket Thuần ===================
+
+// Lắng nghe sự kiện WebSocket thuần
+export function listenToEvent(socket: WebSocket, type: string, callback: (data: any) => void) {
+    if (!socket) return () => {};
+
+    const handler = async (event: MessageEvent) => {
+        try {
+            let rawData = event.data;
+
+            if (rawData instanceof Blob) {
+                rawData = await rawData.text();
+            }
+
+            if (rawData instanceof ArrayBuffer) {
+                rawData = new TextDecoder().decode(rawData);
+            }
+
+            if (typeof rawData !== "string") return;
+
+            const res = JSON.parse(rawData);
+
+            if (res.type === type) {
+                callback(res.data);
+            }
+        } catch (e) {
+            console.error("Invalid WS message", e);
+        }
+    };
+
+    socket.addEventListener("message", handler);
+
+    return () => {
+        socket.removeEventListener("message", handler);
+    };
 }
 
-export function removeEventListener(socket: any, eventName: string, callback?: (...args: any[]) => void) {
-   if (callback) {
-      socket?.off(eventName, callback);
-   } else {
-      socket?.off(eventName);
-   }
-   logWithColor.sln().mes("🔴 REMOVED - ", { color: "red" }).mes(eventName, { color: "cyan", fontWeight: "bold" }).eln();
+// Gửi dữ liệu
+export function emitToEvent(socket: WebSocket, type: string, payload: any) {
+    if (!socket) return;
+
+    socket.send(
+        JSON.stringify({
+            type,
+            payload,
+        })
+    );
+
+    logWithColor.sln().mes("🔵 EMIT - ", { color: "blue" }).mes(type, { color: "cyan", fontWeight: "bold" }).eln();
 }
 
-export function emitToEvent(socket: any, eventName: string, payload: any, cb?: (data: any) => void) {
-   socket?.emit(eventName, payload, cb);
-   logWithColor
-      .sln()
-      .mes("🔵 EMIT - ", { color: "blue" })
-      .mes(eventName, { color: "cyan", fontWeight: "bold" })
-      .mes(payload, { color: "gray", fontSize: "12px" })
-      .eln();
+// Gỡ listener
+export function removeEventListener(socket: WebSocket) {
+    if (!socket) return;
+    socket.onmessage = null;
+    logWithColor.sln().mes("🔴 REMOVED ALL EVENT LISTENERS", { color: "red" }).eln();
 }

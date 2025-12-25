@@ -5,10 +5,10 @@ import { useAppSelector } from "@/redux/hooks";
 import { Stack } from "@mantine/core";
 
 export default function HomeLeft() {
-   const info = useAppSelector((state) => state.user.info);
-   return (
-      <Stack>
-         <TagUser fullName={info?.fullName} avatar={info?.avatar} />
-      </Stack>
-   );
+    const info = useAppSelector((state) => state.user.info);
+    return (
+        <Stack>
+            <TagUser full_name={info?.full_name} avatar={info?.avatar} />
+        </Stack>
+    );
 }

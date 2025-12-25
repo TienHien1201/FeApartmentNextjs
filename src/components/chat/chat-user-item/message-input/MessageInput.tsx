@@ -30,22 +30,38 @@ export default function MessageInput({ stateChat }: TProps) {
     };
 
     const handleSubmit = async () => {
-        if (!isConnected) return toast.warning(`isConnected: ${isConnected}`);
-        if (!userId) return toast.warning(`userId: ${userId}`);
-        if (!email) return toast.warning(`email: ${email}`);
-        if (value.trim() === ``) return;
-        if (!isConnected) return toast.warning(`Disconnected. Refresh to reconnect.`);
-        if (!stateChat.chatGroupId) return toast.warning(`ChatGroupId: ${stateChat.chatGroupId}`);
+        if (!socket || !isConnected) {
+            toast.warning("WebSocket chưa kết nối");
+            return;
+        }
+
+        if (!userId) {
+            toast.warning("Vui lòng đăng nhập");
+            return;
+        }
+
+        if (!stateChat.chatGroupId) {
+            toast.warning("Chat group không hợp lệ");
+            return;
+        }
+
+        if (!value.trim()) return;
+
         const accessToken = await getAccessToken();
-        if (!accessToken) return toast.error("Vui lòng đăng nhập");
+        if (!accessToken) {
+            toast.error("Vui lòng đăng nhập");
+            return;
+        }
 
         const payload: TSendMessageReq = {
-            message: value,
-            accessToken,
+            message: value.trim(),
             chatGroupId: stateChat.chatGroupId,
+            accessToken,
         };
-        emitToEvent(socket, SOCKET_CHAT_MES.SEND_MESSAGE, payload, () => {});
-        setValue(``);
+
+        emitToEvent(socket, SOCKET_CHAT_MES.SEND_MESSAGE, payload);
+
+        setValue("");
     };
     return (
         <Box

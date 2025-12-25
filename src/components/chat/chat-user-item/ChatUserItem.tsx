@@ -1,18 +1,17 @@
 import { SOCKET_CHAT_MES } from "@/constant/chat.constant";
-import { emitToEvent } from "@/helpers/chat.helper";
+import { emitToEvent, listenToEvent } from "@/helpers/chat.helper";
+import { getAccessToken } from "@/helpers/cookies.helper";
 import { useSocket } from "@/hooks/socket.hook";
-import { TAllmessage, TJoinRoomReq, TJoinRoomRes, TLeaveRoomReq, TStateChat } from "@/types/chat.type";
+import { useAppSelector } from "@/redux/hooks";
+import { TSocketRes } from "@/types/base.type";
+import { TAllmessage, TJoinRoomReq, TJoinRoomRes, TStateChat } from "@/types/chat.type";
 import { Divider, Stack } from "@mantine/core";
+import _ from "lodash";
 import React, { useEffect } from "react";
+import { toast } from "react-toastify";
 import MessageHeader from "./message-header/MessageHeader";
 import MessageInput from "./message-input/MessageInput";
 import MessageList from "./message-list/MessageList";
-import _ from "lodash";
-import { useAppSelector } from "@/redux/hooks";
-import { TSocketRes } from "@/types/base.type";
-import { toast } from "react-toastify";
-import { resError } from "@/helpers/function.helper";
-import { getAccessToken } from "@/helpers/cookies.helper";
 
 type TProps = {
     stateChat: TStateChat;
@@ -25,37 +24,39 @@ function ChatUserItem({ i, stateChat, dataSendMessage }: TProps) {
     const userId = useAppSelector((state) => state.user.info?.id);
 
     useEffect(() => {
-        (async () => {
-            if (!socket || !userId) return;
-            const accessToken = await getAccessToken();
-            if (!accessToken) return toast.error("Vui lòng đăng nhập");
+        if (!socket || !userId) return;
 
-            const payload: TJoinRoomReq = { chatGroupId: stateChat.chatGroupId, accessToken };
-            emitToEvent(socket, SOCKET_CHAT_MES.JOIN_ROOM, payload, (data: TSocketRes<TJoinRoomRes>) => {
-                try {
-                    console.log({ JOIN_ROOM: { data } });
-                    if (data.status === "error") throw new Error(data.message);
-                } catch (error) {
-                    console.log({ JOIN_ROOM: { error } });
-                    toast.error(resError(error, "Join Room Failed"));
-                } finally {
+        let unsubJoin: (() => void) | undefined;
+
+        (async () => {
+            const accessToken = await getAccessToken();
+            if (!accessToken) {
+                toast.error("Vui lòng đăng nhập");
+                return;
+            }
+
+            const payload: TJoinRoomReq = {
+                chatGroupId: stateChat.chatGroupId,
+                accessToken,
+            };
+
+            emitToEvent(socket, SOCKET_CHAT_MES.JOIN_ROOM, payload);
+
+            unsubJoin = listenToEvent(socket, SOCKET_CHAT_MES.JOIN_ROOM, (data: TSocketRes<TJoinRoomRes>) => {
+                if (data.status === "error") {
+                    toast.error(data.message);
                 }
             });
         })();
+
         return () => {
-            if (!socket || !userId) return;
-            const payload: TLeaveRoomReq = { chatGroupId: stateChat.chatGroupId };
-            emitToEvent(socket, SOCKET_CHAT_MES.LEAVE_ROOM, payload, (data: TSocketRes<null>) => {
-                try {
-                    console.log({ LEAVE_ROOM: { data } });
-                    if (data.status === "error") throw new Error(data.message);
-                } catch (error) {
-                    console.log({ LEAVE_ROOM: { error } });
-                } finally {
-                }
+            if (unsubJoin) unsubJoin();
+
+            emitToEvent(socket, SOCKET_CHAT_MES.LEAVE_ROOM, {
+                chatGroupId: stateChat.chatGroupId,
             });
         };
-    }, [socket, userId]);
+    }, [socket, userId, stateChat.chatGroupId]);
 
     return (
         <Stack

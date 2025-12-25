@@ -41,7 +41,7 @@ export default function ProfileInfo({ info, type }: TProps) {
                     <Avatar
                         onClick={type === "my" ? handleModalEditAvatar.open : undefined}
                         avatar={info?.avatar}
-                        fullName={info?.fullName}
+                        full_name={info?.full_name}
                         size={120}
                         radius={120}
                         sx={{ cursor: type === "my" ? `pointer` : `unset` }}
@@ -50,7 +50,7 @@ export default function ProfileInfo({ info, type }: TProps) {
                     <Stack sx={{ flex: 1, gap: `10px` }}>
                         <Group>
                             <Text truncate maw={300} fz="h3" fw={"bold"}>
-                                {info?.fullName}
+                                {info?.full_name}
                             </Text>
                             <Badge user={info} />
                         </Group>

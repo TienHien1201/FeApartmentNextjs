@@ -62,7 +62,7 @@ export default function CommentInput({ article, setListComment }: TProps) {
     return (
         <Group sx={{ padding: `10px` }}>
             <Box sx={{ height: `100%` }}>
-                <Avatar fullName={info?.fullName} avatar={info?.avatar} />
+                <Avatar full_name={info?.full_name} avatar={info?.avatar} />
             </Box>
             <Textarea
                 sx={{ flex: 1 }}

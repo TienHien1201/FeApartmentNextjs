@@ -24,7 +24,7 @@ export default function HomeCenter() {
                     }}
                 >
                     <Group wrap="nowrap">
-                        <Avatar fullName={info?.fullName} avatar={info?.avatar} />
+                        <Avatar full_name={info?.full_name} avatar={info?.avatar} />
                         <Button
                             styles={{ inner: { justifyContent: `start` } }}
                             onClick={handleModalCreateArticle.open}
@@ -35,7 +35,7 @@ export default function HomeCenter() {
                             radius="xl"
                         >
                             <Text fz={`md`} fw={`bold`} w={`100%`}>
-                                {info?.fullName} ơi, Bạn Đang Nghĩ Gì Thế
+                                {info?.full_name} ơi, Bạn Đang Nghĩ Gì Thế
                             </Text>
                         </Button>
                     </Group>

@@ -3,16 +3,16 @@ import { Avatar as AvatarMantine, AvatarProps, Text, Tooltip } from "@mantine/co
 import { forwardRef } from "react";
 
 type TProps = {
-   fullName?: string;
+   full_name?: string;
    avatar?: string;
 } & AvatarProps;
 
-const Avatar = forwardRef<HTMLDivElement, TProps & React.ComponentPropsWithoutRef<"div">>(({ fullName, avatar, ...props }, ref) => {
+const Avatar = forwardRef<HTMLDivElement, TProps & React.ComponentPropsWithoutRef<"div">>(({ full_name, avatar, ...props }, ref) => {
    return (
       <Tooltip
          label={
             <Text truncate maw={100}>
-               {fullName}
+               {full_name}
             </Text>
          }
          position="left"
@@ -23,7 +23,7 @@ const Avatar = forwardRef<HTMLDivElement, TProps & React.ComponentPropsWithoutRe
             alt="avatar"
             src={checkPathImage(avatar)}
             color={`initials`}
-            name={!avatar ? (fullName as string | undefined) : `??`}
+            name={!avatar ? (full_name as string | undefined) : `??`}
             variant="filled"
          >
             {/* {roleId === 1 && (

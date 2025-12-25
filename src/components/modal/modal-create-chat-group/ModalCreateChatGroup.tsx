@@ -1,21 +1,20 @@
+import { useSearchNameUser } from "@/api/tantask/user.tanstack";
 import NodataOverlay from "@/components/no-data/NodataOverlay";
 import TagUser from "@/components/tag-user/TagUser";
 import { SOCKET_CHAT_MES } from "@/constant/chat.constant";
-import { emitToEvent } from "@/helpers/chat.helper";
-import { animationList, resError } from "@/helpers/function.helper";
+import { emitToEvent, listenToEvent } from "@/helpers/chat.helper";
+import { getAccessToken } from "@/helpers/cookies.helper";
+import { animationList } from "@/helpers/function.helper";
 import { useSocket } from "@/hooks/socket.hook";
 import { useAppSelector } from "@/redux/hooks";
-import { useSearchNameUser } from "@/api/tantask/user.tanstack";
-import { TSocketRes } from "@/types/base.type";
-import { TCreateRoomReq, TCreateRoomRes } from "@/types/chat.type";
+import { TCreateRoomReq, TCreateRoomRes, TSocketEvent } from "@/types/chat.type";
 import { TUser } from "@/types/user.type";
 import { ActionIcon, Box, Button, Divider, Group, Input, LoadingOverlay, Modal, Stack, Text } from "@mantine/core";
 import { useDebouncedCallback } from "@mantine/hooks";
 import { IconSearch, IconX } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { getAccessToken } from "@/helpers/cookies.helper";
 
 type TProps = {
     opened: boolean;
@@ -27,22 +26,16 @@ export default function ModalCreateChatGroup({ opened, close }: TProps) {
     const searchNameUser = useSearchNameUser();
     const id = useAppSelector((state) => state.user.info?.id);
     const [userSelected, setUserSelected] = useState<TUser[]>([]);
-    const [chatGroupName, setChatGroupName] = useState<string>("");
+    const [chatGroupName, setChatGroupName] = useState("");
     const { socket } = useSocket();
     const info = useAppSelector((state) => state.user.info);
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
 
-    const handleSearch = useDebouncedCallback(async (query: string) => {
-        if (query.trim() === "") return;
-        searchNameUser.mutate(query, {
-            onSuccess: (data) => {
-                console.log(data);
-            },
-            onError: (error) => {
-                console.log(error);
-            },
-        });
+    /* ================= SEARCH USER ================= */
+    const handleSearch = useDebouncedCallback((query: string) => {
+        if (!query.trim()) return;
+        searchNameUser.mutate(query);
     }, 500);
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,84 +47,88 @@ export default function ModalCreateChatGroup({ opened, close }: TProps) {
         if (!opened) setSearch("");
     }, [opened]);
 
+    /* ================= SOCKET LISTENER ================= */
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const unsubscribeSuccess = listenToEvent(socket, SOCKET_CHAT_MES.CREATE_ROOM, (data: TCreateRoomRes) => {
+            toast.success("Tạo nhóm thành công");
+
+            close();
+            setChatGroupName("");
+            setUserSelected([]);
+            setLoading(false);
+
+            queryClient.invalidateQueries({
+                queryKey: ["chat-group-list-many"],
+            });
+        });
+
+        const unsubscribeError = listenToEvent(socket, SOCKET_CHAT_MES.ERR, (err) => {
+            toast.error(err?.message || "Create Room Failed");
+            setLoading(false);
+        });
+
+        return () => {
+            unsubscribeSuccess();
+            unsubscribeError();
+        };
+    }, [socket, queryClient, close]);
+
+    /* ================= ACTIONS ================= */
     const handleRemoveUser = (user: TUser) => {
-        setUserSelected(userSelected.filter((u) => u.id !== user.id));
+        setUserSelected((prev) => prev.filter((u) => u.id !== user.id));
     };
 
     const handleCreateChatGroup = async () => {
         if (!socket || !info) return;
+
         const accessToken = await getAccessToken();
+        if (!accessToken) return toast.error("Vui lòng đăng nhập");
+        if (!chatGroupName.trim()) return toast.warning("Vui lòng nhập tên nhóm");
+        if (userSelected.length < 2) return toast.warning("Vui lòng chọn ít nhất 2 người");
 
-        if (!accessToken) return toast.error("Vui lòng đăng nhập");
-        if (chatGroupName.trim() === "") return toast.warning("Vui lòng nhập tên nhóm");
-        if (userSelected.length < 2) return toast.warning("Vui lòng chọn ít nhất 2 người");
-
-        const targetUserIds = userSelected.map((u) => u.id);
         setLoading(true);
 
-        const payload: TCreateRoomReq = { targetUserIds: targetUserIds, name: chatGroupName, accessToken };
-        emitToEvent(socket, SOCKET_CHAT_MES.CREATE_ROOM, payload, (data: TSocketRes<TCreateRoomRes>) => {
-            try {
-                console.log({ CREATE_ROOM: { data } });
-                if (data.status === "error") throw new Error(data.message);
-                if (!data.data.chatGroupId) throw new Error("Be not response chatGroupId");
-                toast.success(data.message);
+        const payload: TCreateRoomReq = {
+            targetUserIds: userSelected.map((u) => u.id),
+            name: chatGroupName,
+            accessToken,
+        };
 
-                close();
-                setChatGroupName("");
-                setUserSelected([]);
-                queryClient.invalidateQueries({ queryKey: [`chat-group-list-many`] });
-            } catch (error) {
-                console.log({ CREATE_ROOM: { error } });
-                toast.error(resError(error, "Create Room Failed"));
-            } finally {
-                setLoading(false);
-            }
-        });
+        emitToEvent(socket, SOCKET_CHAT_MES.CREATE_ROOM, payload);
     };
 
+    /* ================= UI ================= */
     return (
         <Modal
             opened={opened}
             onClose={close}
-            size={`md`}
-            overlayProps={{
-                backgroundOpacity: 0.55,
-                blur: 3,
-            }}
-            styles={{
-                body: {
-                    padding: 10,
-                },
-            }}
+            size="md"
             withCloseButton={false}
+            overlayProps={{ backgroundOpacity: 0.55, blur: 3 }}
+            styles={{ body: { padding: 10 } }}
         >
             <Stack>
                 <Input value={chatGroupName} onChange={(e) => setChatGroupName(e.target.value)} placeholder="Tên nhóm" />
 
                 <Stack gap={5}>
                     <Text>Thành viên nhóm</Text>
+
                     <Group>
-                        {userSelected.map((user, i) => {
-                            return (
-                                <Group key={i} sx={{ ...animationList(i), flexWrap: `nowrap`, gap: 5 }}>
-                                    <Box maw={`380px`}>
-                                        <TagUser sizeAvatar={`sm`} fullName={user.fullName} avatar={user.avatar} />
-                                    </Box>
-                                    <ActionIcon
-                                        variant="default"
-                                        radius={`xl`}
-                                        size={`xs`}
-                                        onClick={() => {
-                                            handleRemoveUser(user);
-                                        }}
-                                    >
-                                        <IconX width={`70%`} height={`70%`} stroke={1.5} />
-                                    </ActionIcon>
-                                </Group>
-                            );
-                        })}
+                        {userSelected.map((user, i) => (
+                            <Group key={i} sx={{ ...animationList(i), gap: 5, flexWrap: "nowrap" }}>
+                                <Box maw={380}>
+                                    <TagUser sizeAvatar="sm" full_name={user.full_name} avatar={user.avatar} />
+                                </Box>
+                                <ActionIcon size="xs" radius="xl" variant="default" onClick={() => handleRemoveUser(user)}>
+                                    <IconX size="70%" stroke={1.5} />
+                                </ActionIcon>
+                            </Group>
+                        ))}
                     </Group>
+
                     <Box>
                         <Input
                             value={search}
@@ -141,55 +138,49 @@ export default function ModalCreateChatGroup({ opened, close }: TProps) {
                             placeholder="Tìm kiếm người dùng"
                         />
                         <Divider />
+
                         <Stack
-                            sx={{
-                                minHeight: `100px`,
-                                maxHeight: `500px`,
-                                overflowY: `scroll`,
-                                overflowX: `hidden`,
-                                position: `relative`,
-                                padding: `5px`,
-                            }}
                             gap={2}
+                            sx={{
+                                minHeight: 100,
+                                maxHeight: 500,
+                                overflowY: "auto",
+                                padding: 5,
+                                position: "relative",
+                            }}
                         >
-                            <LoadingOverlay visible={searchNameUser.isPending} zIndex={1000} overlayProps={{ radius: "sm", bg: `transparent` }} />
+                            <LoadingOverlay visible={searchNameUser.isPending} overlayProps={{ bg: "transparent" }} />
+
                             <NodataOverlay
                                 width={50}
                                 visible={
                                     !searchNameUser.isPending &&
-                                    (!searchNameUser.data || searchNameUser.data?.items?.length === 0 || searchNameUser.isError)
+                                    (!searchNameUser.data || searchNameUser.data.items?.length === 0 || searchNameUser.isError)
                                 }
                             />
+
                             {searchNameUser.data?.items?.map((user, i) => {
-                                if (user.id === id) return <Fragment key={i} />;
+                                if (user.id === id) return null;
+
                                 return (
                                     <Box
                                         key={i}
-                                        onClick={() => {
-                                            setUserSelected((prev) => {
-                                                if (prev.length === 0) {
-                                                    return [user];
-                                                } else {
-                                                    if (prev.includes(user)) {
-                                                        return prev.filter((item) => item.id !== user.id);
-                                                    } else {
-                                                        return [...prev, user];
-                                                    }
-                                                }
-                                            });
-                                        }}
+                                        onClick={() =>
+                                            setUserSelected((prev) =>
+                                                prev.some((u) => u.id === user.id) ? prev.filter((u) => u.id !== user.id) : [...prev, user]
+                                            )
+                                        }
                                         sx={{
                                             ...animationList(i),
-                                            padding: `5px`,
+                                            padding: 5,
                                             cursor: "pointer",
-                                            borderRadius: `5px`,
-                                            "--button-hover": `var(--mantine-color-default-hover)`,
+                                            borderRadius: 5,
                                             "&:hover": {
-                                                background: `var(--button-hover, var(--mantine-primary-color-filled-hover))`,
+                                                background: "var(--mantine-color-default-hover)",
                                             },
                                         }}
                                     >
-                                        <TagUser sizeAvatar={`sm`} fullName={user.fullName} avatar={user.avatar} />
+                                        <TagUser sizeAvatar="sm" full_name={user.full_name} avatar={user.avatar} />
                                     </Box>
                                 );
                             })}
@@ -197,7 +188,7 @@ export default function ModalCreateChatGroup({ opened, close }: TProps) {
                     </Box>
                 </Stack>
 
-                <Group sx={{ justifyContent: `flex-end` }}>
+                <Group justify="flex-end">
                     <Button variant="default" onClick={close}>
                         Đóng
                     </Button>

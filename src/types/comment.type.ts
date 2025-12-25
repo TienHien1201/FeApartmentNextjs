@@ -26,19 +26,19 @@ export type TListComment = {
     parentId: string | null;
     replyCount: number;
     userId: string;
-    createdAt?: string;
-    updatedAt?: string;
+    created_at?: string;
+    updated_at?: string;
     isDeleted?: boolean;
     Users: {
         id?: string;
         email?: string;
-        fullName: string;
+        full_name: string;
         avatar?: string | undefined;
         googleId?: string | undefined;
         roleId?: string;
         isTotp?: boolean;
-        createdAt?: string;
-        updatedAt?: string;
+        created_at?: string;
+        updated_at?: string;
         isDeleted?: boolean;
     };
 };

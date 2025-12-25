@@ -22,17 +22,17 @@ export default function ModalEditProfile({ opened, close }: TProps) {
 
     const updateProfileForm = useFormik({
         initialValues: {
-            fullName: "",
+            full_name: "",
         },
         validationSchema: Yup.object().shape({
-            fullName: Yup.string().trim().required(),
+            full_name: Yup.string().trim().required(),
         }),
         onSubmit: async (valuesRaw) => {
             if (!info) return;
 
             const payload: TEditProfileReq = {
                 id: info.id,
-                fullName: valuesRaw.fullName.trim(),
+                full_name: valuesRaw.full_name.trim(),
             };
             console.log({ payload });
 
@@ -74,12 +74,12 @@ export default function ModalEditProfile({ opened, close }: TProps) {
                             withAsterisk
                             label="Tên đầy đủ"
                             placeholder="Tên đầy đủ"
-                            name="fullName"
-                            value={updateProfileForm.values.fullName}
+                            name="full_name"
+                            value={updateProfileForm.values.full_name}
                             onChange={updateProfileForm.handleChange}
                             error={
-                                updateProfileForm.touched.fullName && typeof updateProfileForm.errors.fullName === "string"
-                                    ? updateProfileForm.errors.fullName
+                                updateProfileForm.touched.full_name && typeof updateProfileForm.errors.full_name === "string"
+                                    ? updateProfileForm.errors.full_name
                                     : undefined
                             }
                             inputWrapperOrder={["label", "input", "error"]}

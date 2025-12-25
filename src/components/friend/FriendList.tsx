@@ -29,7 +29,7 @@ export default function FriendList({ height, filters, type, id }: TProps) {
         pagination: { pageIndex: page, pageSize },
         filters,
         id: id,
-        sort: { sortBy: `createdAt`, isDesc: true },
+        sort: { sortBy: `created_at`, isDesc: true },
     });
 
     // Khi fetch thành công, append friends vào cuối mảng
@@ -72,12 +72,12 @@ export default function FriendList({ height, filters, type, id }: TProps) {
                                     <Stack gap={5}>
                                         <Avatar
                                             sx={{ width: `auto`, height: `auto`, aspectRatio: `1 / 1` }}
-                                            fullName={friend.Friends.fullName}
+                                            full_name={friend.Friends.full_name}
                                             avatar={friend.Friends.avatar}
                                             radius={`md`}
                                         />
                                         <Text ta={`center`} fw={`bold`}>
-                                            {friend.Friends.fullName}
+                                            {friend.Friends.full_name}
                                         </Text>
                                     </Stack>
                                 );

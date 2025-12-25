@@ -1,11 +1,11 @@
 export type TBaseTimestamps = {
-   isDeleted: boolean;
-   createdAt: string;
-   updatedAt: string;
+    isDeleted: boolean;
+    created_at: string;
+    updated_at: string;
 };
 
 export type TSocketRes<T> = {
-   status: string;
-   message: string;
-   data: T;
+    status: string;
+    message: string;
+    data: T;
 };

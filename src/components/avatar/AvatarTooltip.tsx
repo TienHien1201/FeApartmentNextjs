@@ -2,21 +2,21 @@ import { Text, Tooltip } from "@mantine/core";
 import Avatar from "./Avatar";
 
 type TProps = {
-   fullName?: string;
-   avatar?: string;
+    full_name?: string;
+    avatar?: string;
 };
 
-export default function AvatarTooltip({ fullName, avatar }: TProps) {
-   return (
-      <Tooltip
-         label={
-            <Text truncate maw={100}>
-               {fullName}
-            </Text>
-         }
-         position="left"
-      >
-         <Avatar fullName={fullName} avatar={avatar} />
-      </Tooltip>
-   );
+export default function AvatarTooltip({ full_name, avatar }: TProps) {
+    return (
+        <Tooltip
+            label={
+                <Text truncate maw={100}>
+                    {full_name}
+                </Text>
+            }
+            position="left"
+        >
+            <Avatar full_name={full_name} avatar={avatar} />
+        </Tooltip>
+    );
 }

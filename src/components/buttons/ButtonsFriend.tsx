@@ -1,11 +1,10 @@
 import { useFindOneFriend, useFriendStatus } from "@/api/tantask/friend.tanstack";
 import { SOCKET_CHAT_MES } from "@/constant/chat.constant";
-import { addChatOpened, emitToEvent, listenToEvent, removeEventListener } from "@/helpers/chat.helper";
+import { addChatOpened, emitToEvent, listenToEvent } from "@/helpers/chat.helper";
 import { getAccessToken } from "@/helpers/cookies.helper";
 import { resError } from "@/helpers/function.helper";
 import { useSocket } from "@/hooks/socket.hook";
 import { useAppSelector } from "@/redux/hooks";
-import { TSocketRes } from "@/types/base.type";
 import { TCreateRoomReq, TCreateRoomRes } from "@/types/chat.type";
 import { TfriendshipAction, TStatusFriend, TStatusResult } from "@/types/friend.type";
 import { TUser } from "@/types/user.type";
@@ -13,6 +12,8 @@ import { Button, Group } from "@mantine/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+
+/* ================= FRIEND ACTION ================= */
 
 function getFriendAction(info: { id?: string }, detailUser: { id?: string }, findOneFriend: any): TStatusResult {
     const isSender = findOneFriend?.userId === info?.id;
@@ -22,14 +23,13 @@ function getFriendAction(info: { id?: string }, detailUser: { id?: string }, fin
     let text = "Kết bạn";
     let disabled = false;
 
-    const daysPassed = findOneFriend?.updatedAt ? (Date.now() - new Date(findOneFriend.updatedAt).getTime()) / (1000 * 3600 * 24) : 8; // Nếu không có updatedAt thì mặc định qua hạn
+    const daysPassed = findOneFriend?.updated_at ? (Date.now() - new Date(findOneFriend.updated_at).getTime()) / (1000 * 3600 * 24) : 8;
 
     if (!info?.id || !detailUser?.id) {
         return { nextStatus, text: "Đăng nhập để kết bạn", disabled: true };
     }
 
     if (isSender) {
-        // Người gửi
         switch (status) {
             case "pending":
                 text = "Đã gửi";
@@ -45,20 +45,13 @@ function getFriendAction(info: { id?: string }, detailUser: { id?: string }, fin
                     disabled = true;
                 } else {
                     nextStatus = "pending";
-                    text = "Kết bạn";
                 }
                 break;
             case "removed":
                 nextStatus = "pending";
-                text = "Kết bạn";
-                break;
-            default:
-                nextStatus = "pending";
-                text = "Kết bạn";
                 break;
         }
     } else {
-        // Người nhận hoặc chưa từng gửi
         switch (status) {
             case "pending":
                 nextStatus = "accepted";
@@ -74,16 +67,10 @@ function getFriendAction(info: { id?: string }, detailUser: { id?: string }, fin
                     disabled = true;
                 } else {
                     nextStatus = "pending";
-                    text = "Kết bạn";
                 }
                 break;
             case "removed":
                 nextStatus = "pending";
-                text = "Kết bạn";
-                break;
-            default:
-                nextStatus = "pending";
-                text = "Kết bạn";
                 break;
         }
     }
@@ -91,75 +78,80 @@ function getFriendAction(info: { id?: string }, detailUser: { id?: string }, fin
     return { nextStatus, text, disabled };
 }
 
+/* ================= COMPONENT ================= */
+
 type Props = {
     detailUser: TUser;
 };
 
 export default function ButtonsFriend({ detailUser }: Props) {
     const { socket } = useSocket();
-    const [loading, setLoading] = useState(false);
     const info = useAppSelector((state) => state.user.info);
 
+    const [loading, setLoading] = useState(false);
     const queryClient = useQueryClient();
+
     const friendStatus = useFriendStatus();
     const findOneFriend = useFindOneFriend(detailUser.id);
 
+    /* ================= SOCKET LISTENER ================= */
+
     useEffect(() => {
-        listenToEvent(socket, SOCKET_CHAT_MES.RELOAD_STATUS_FRIEND_SHIP, () => {
-            queryClient.invalidateQueries({ queryKey: [`find-one-friend`] });
+        if (!socket) return;
+
+        const unsubscribe = listenToEvent(socket, SOCKET_CHAT_MES.CREATE_ROOM, (data: TCreateRoomRes) => {
+            if (!data?.chatGroupId) return;
+
+            addChatOpened(
+                {
+                    chatGroupId: data.chatGroupId,
+                    chatGroupName: "",
+                    chatGroupMembers: [
+                        {
+                            userId: detailUser.id,
+                            full_name: detailUser.full_name,
+                            avatar: detailUser.avatar,
+                            roleId: detailUser.roleId,
+                        },
+                        {
+                            userId: info!.id,
+                            full_name: info!.full_name,
+                            avatar: info!.avatar,
+                            roleId: info!.roleId,
+                        },
+                    ],
+                },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ["chat-list-user-item"] });
+                    queryClient.invalidateQueries({ queryKey: ["chat-list-user-bubble"] });
+                }
+            );
+
+            setLoading(false);
         });
 
-        return () => {
-            removeEventListener(socket, SOCKET_CHAT_MES.RELOAD_STATUS_FRIEND_SHIP);
-        };
-    }, [socket]);
+        return () => unsubscribe();
+    }, [socket, info, detailUser, queryClient]);
+
+    /* ================= ACTIONS ================= */
 
     const handleChat = async () => {
-        if (!info?.id || !detailUser.id || !socket) return;
+        if (!socket || !info?.id || !detailUser.id) return;
+
         const accessToken = await getAccessToken();
-        if (!accessToken) return toast.error("Vui lòng đăng nhập");
+        if (!accessToken) {
+            toast.error("Vui lòng đăng nhập");
+            return;
+        }
 
         setLoading(true);
 
-        const payload: TCreateRoomReq = { targetUserIds: [detailUser.id], accessToken };
+        const payload: TCreateRoomReq = {
+            targetUserIds: [detailUser.id],
+            accessToken,
+        };
 
-        emitToEvent(socket, SOCKET_CHAT_MES.CREATE_ROOM, payload, (data: TSocketRes<TCreateRoomRes>) => {
-            try {
-                console.log({ CREATE_ROOM: { info, detailUser: detailUser, data } });
-                if (data.status === "error") throw new Error(data.message);
-                if (!data.data.chatGroupId) throw new Error("Be not response chatGroupId");
-
-                addChatOpened(
-                    {
-                        chatGroupId: data.data?.chatGroupId,
-                        chatGroupName: "",
-                        chatGroupMembers: [
-                            {
-                                avatar: detailUser.avatar,
-                                fullName: detailUser.fullName,
-                                roleId: detailUser.roleId,
-                                userId: detailUser.id,
-                            },
-                            {
-                                avatar: info?.avatar,
-                                fullName: info?.fullName,
-                                roleId: info?.roleId,
-                                userId: info?.id,
-                            },
-                        ],
-                    },
-                    () => {
-                        queryClient.invalidateQueries({ queryKey: [`chat-list-user-item`] });
-                        queryClient.invalidateQueries({ queryKey: [`chat-list-user-bubble`] });
-                    }
-                );
-            } catch (error) {
-                console.log(error);
-                toast.error(resError(error, "Create Room Failed"));
-            } finally {
-                setLoading(false);
-            }
-        });
+        emitToEvent(socket, SOCKET_CHAT_MES.CREATE_ROOM, payload);
     };
 
     const actionInfo = getFriendAction(info || {}, detailUser || {}, findOneFriend.data);
@@ -171,36 +163,40 @@ export default function ButtonsFriend({ detailUser }: Props) {
             toast.error(actionInfo.text);
             return;
         }
+
         const payload: TfriendshipAction = {
             userId: info.id,
             friendId: detailUser.id,
             status: actionInfo.nextStatus,
         };
+
         friendStatus.mutate(payload, {
             onSuccess: () => {
-                let mes = `Đã gửi lời mời kết bạn`;
-                if (actionInfo.nextStatus === "accepted") mes = `Đã chấp nhận kết bạn`;
-                if (actionInfo.nextStatus === "removed") mes = `Đã xoá bạn`;
-                toast.success(mes);
+                const map: Record<string, string> = {
+                    pending: "Đã gửi lời mời kết bạn",
+                    accepted: "Đã chấp nhận kết bạn",
+                    removed: "Đã xoá bạn",
+                };
+                toast.success(map[actionInfo.nextStatus] || "Thành công");
             },
             onSettled: () => {
-                queryClient.invalidateQueries({ queryKey: [`find-one-friend`] });
+                queryClient.invalidateQueries({ queryKey: ["find-one-friend"] });
             },
         });
     };
 
-    const handleDisabledButtonAddFriend = () => actionInfo.disabled;
-    const handleTextButtonAddFriend = () => actionInfo.text;
+    /* ================= UI ================= */
 
     return (
         <Group>
             <Button
-                disabled={handleDisabledButtonAddFriend()}
-                loading={friendStatus.isPending || findOneFriend.isLoading || findOneFriend.isPending || findOneFriend.isFetching}
+                disabled={actionInfo.disabled}
+                loading={friendStatus.isPending || findOneFriend.isLoading || findOneFriend.isFetching}
                 onClick={handleMakeFriend}
             >
-                {handleTextButtonAddFriend()}
+                {actionInfo.text}
             </Button>
+
             <Button loading={loading} onClick={handleChat} variant="default">
                 Nhắn tin
             </Button>

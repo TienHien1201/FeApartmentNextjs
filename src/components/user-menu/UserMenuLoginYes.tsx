@@ -63,14 +63,14 @@ export default function UserMenuLoginYes({ onClick }: TProps) {
                 <Avatar
                     size={`md`}
                     style={{ width: `38px`, height: `38px`, padding: `0px` }}
-                    fullName={info?.fullName}
+                    full_name={info?.full_name}
                     avatar={info?.avatar}
                     color="initials"
                 />
 
                 <Stack gap={0}>
                     <Text truncate sx={{ fontWeight: 900, fontSize: `16px`, maxWidth: `130px` }}>
-                        {info?.fullName}
+                        {info?.full_name}
                     </Text>
                     <Text truncate sx={{ maxWidth: `130px`, fontSize: `12px`, opacity: 0.5 }}>
                         {info?.email}
