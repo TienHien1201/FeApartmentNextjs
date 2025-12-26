@@ -8,7 +8,6 @@ export const checkPathImage = (path: string | null | undefined) => {
     if (path.includes(`http`)) {
         return path;
     }
-
     if (path.includes(`local`)) {
         return `${NEXT_PUBLIC_BASE_DOMAIN}${FOLDER_IMAGE_BE}${path}`;
     } else {
